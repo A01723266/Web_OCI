@@ -1,56 +1,46 @@
-import { useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
-import ResponsiveAppBar from './components/AppBar';
-import './App.css'
-import Login from './views/Login';
-import Profile from './views/Profile';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import Home from "./pages/Home";
+import Profile from "./pages/Profile";
+import Users from "./pages/Users";
+
+function ProtectedRoute({ children }) {
+  const user = localStorage.getItem("user");
+  return user ? children : <Navigate to="/" />;
+}
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [username, setUsername] = useState('')
-
-  const handleLogin = (nextUsername, password) => {
-    if (!nextUsername.trim() || !password.trim()) return false
-
-    setUsername(nextUsername.trim())
-    setIsAuthenticated(true)
-    return true
-  }
-
-  const handleLogout = () => {
-    setIsAuthenticated(false)
-    setUsername('')
-  }
-
   return (
-    <>
-      {isAuthenticated && (
-        <ResponsiveAppBar username={username} onLogout={handleLogout} />
-      )}
+    <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Login />} />
         <Route
-          path="/"
+          path="/home"
           element={
-            isAuthenticated
-              ? <Navigate to="/profile" replace />
-              : <Login onLogin={handleLogin} />
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/profile"
           element={
-            isAuthenticated
-              ? <Profile username={username} />
-              : <Navigate to="/" replace />
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
           }
         />
         <Route
-          path="*"
-          element={<Navigate to={isAuthenticated ? '/profile' : '/'} replace />}
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <Users />
+            </ProtectedRoute>
+          }
         />
       </Routes>
-    </>
-  )
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
