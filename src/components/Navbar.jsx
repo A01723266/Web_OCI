@@ -1,12 +1,13 @@
 import { AppBar, Toolbar, Typography, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { clearSession } from "../utils/session";
 
 function Navbar() {
   const navigate = useNavigate();
 
   const logout = () => {
-    localStorage.removeItem("user");
-    navigate("/");
+    clearSession();
+    navigate("/", { replace: true });
   };
 
   return (
@@ -25,11 +26,11 @@ function Navbar() {
         </Button>
 
         <Button color="inherit" onClick={() => navigate("/profile")}>
-          Profile
+          Perfil
         </Button>
 
         <Button color="inherit" onClick={logout}>
-          Logout
+          Cerrar sesion
         </Button>
       </Toolbar>
     </AppBar>

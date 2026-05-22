@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
-import { API_URL } from "../config";
 import {
   Alert,
   Box,
@@ -16,35 +14,64 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import Navbar from "../components/Navbar";
+import { ApiError, apiRequest } from "../utils/api";
+import { getStoredUser } from "../utils/session";
+
+const initialForm = { name: "", username: "", password: "" };
 
 function Users() {
-  const loggedUser = JSON.parse(localStorage.getItem("user"));
+  const navigate = useNavigate();
+  const loggedUser = getStoredUser();
   const [users, setUsers] = useState([]);
-  const [form, setForm] = useState({ name: "", username: "", password: "" });
+  const [form, setForm] = useState(initialForm);
+  const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const getUsers = async () => {
+  const redirectToLogin = (message) => {
+    navigate("/", {
+      replace: true,
+      state: { message },
+    });
+  };
+
+  const handleRequestError = (requestError, fallbackMessage) => {
+    if (requestError instanceof ApiError && requestError.status === 401) {
+      redirectToLogin("Tu sesion expiro o no es valida. Inicia sesion de nuevo.");
+      return;
+    }
+
+    setError(requestError.message || fallbackMessage);
+  };
+
+  const loadUsers = async () => {
+    setLoading(true);
+    setError("");
+
     try {
-      const response = await fetch(`${API_URL}/users`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.msg || "Error al obtener usuarios");
-      }
-
+      const data = await apiRequest("/users");
       setUsers(data);
-    } catch (error) {
-      setError(error.message);
+    } catch (requestError) {
+      handleRequestError(requestError, "Error al obtener usuarios");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    getUsers();
+    loadUsers();
   }, []);
 
   const handleChange = (event) => {
     setForm({ ...form, [event.target.name]: event.target.value });
+  };
+
+  const resetForm = () => {
+    setForm(initialForm);
+    setEditingId(null);
   };
 
   const handleSubmit = async (event) => {
@@ -53,26 +80,54 @@ function Users() {
     setSuccess("");
 
     try {
-      const response = await fetch(`${API_URL}/users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
+      if (editingId) {
+        const payload = {
+          name: form.name,
+          username: form.username,
+        };
 
-      const data = await response.json();
+        if (form.password.trim()) {
+          payload.password = form.password;
+        }
 
-      if (!response.ok) {
-        throw new Error(data.msg || "Error al crear usuario");
+        const updatedUser = await apiRequest(`/users/${editingId}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+
+        setUsers(users.map((user) => (user._id === editingId ? updatedUser : user)));
+        setSuccess("Usuario actualizado correctamente");
+      } else {
+        const newUser = await apiRequest("/users", {
+          method: "POST",
+          body: JSON.stringify(form),
+        });
+
+        setUsers([newUser, ...users]);
+        setSuccess("Usuario agregado correctamente");
       }
 
-      setUsers([...users, data]);
-      setForm({ name: "", username: "", password: "" });
-      setSuccess("Usuario agregado correctamente");
-    } catch (error) {
-      setError(error.message);
+      resetForm();
+    } catch (requestError) {
+      handleRequestError(requestError, "No se pudo guardar el usuario");
     }
+  };
+
+  const handleEdit = (user) => {
+    setError("");
+    setSuccess("");
+    setEditingId(user._id);
+    setForm({
+      name: user.name || "",
+      username: user.username || "",
+      password: "",
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setError("");
+    setSuccess("");
+    resetForm();
   };
 
   const handleDelete = async (id) => {
@@ -80,20 +135,19 @@ function Users() {
     setSuccess("");
 
     try {
-      const response = await fetch(`${API_URL}/users/${id}`, {
+      await apiRequest(`/users/${id}`, {
         method: "DELETE",
       });
 
-      const data = await response.json();
+      setUsers(users.filter((user) => user._id !== id));
 
-      if (!response.ok) {
-        throw new Error(data.msg || "Error al eliminar usuario");
+      if (editingId === id) {
+        resetForm();
       }
 
-      setUsers(users.filter((user) => user._id !== id));
       setSuccess("Usuario eliminado correctamente");
-    } catch (error) {
-      setError(error.message);
+    } catch (requestError) {
+      handleRequestError(requestError, "Error al eliminar usuario");
     }
   };
 
@@ -110,7 +164,7 @@ function Users() {
 
         <Paper sx={{ p: 3, mb: 4 }}>
           <Typography variant="h6" gutterBottom>
-            Agregar usuario
+            {editingId ? "Editar usuario" : "Agregar usuario"}
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit} display="grid" gap={2}>
@@ -129,16 +183,23 @@ function Users() {
               required
             />
             <TextField
-              label="Contraseña"
+              label={editingId ? "Nueva contrasena (opcional)" : "Contrasena"}
               name="password"
               type="password"
               value={form.password}
               onChange={handleChange}
-              required
+              required={!editingId}
             />
-            <Button type="submit" variant="contained">
-              Guardar
-            </Button>
+            <Box display="flex" gap={2}>
+              <Button type="submit" variant="contained">
+                {editingId ? "Actualizar" : "Guardar"}
+              </Button>
+              {editingId && (
+                <Button type="button" variant="outlined" onClick={handleCancelEdit}>
+                  Cancelar
+                </Button>
+              )}
+            </Box>
           </Box>
         </Paper>
 
@@ -152,19 +213,37 @@ function Users() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.map((user) => (
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={3} align="center">
+                    Cargando usuarios...
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!loading && users.map((user) => (
                 <TableRow key={user._id}>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.username}</TableCell>
                   <TableCell align="right">
-                    <Button color="error" variant="outlined" disabled={loggedUser?._id === user._id} onClick={() => handleDelete(user._id)}>
-                      {loggedUser?._id === user._id ? "Sesión actual" : "ELIMINAR"}
-                    </Button>
+                    <Box display="flex" justifyContent="flex-end" gap={1}>
+                      <Button variant="outlined" onClick={() => handleEdit(user)}>
+                        Editar
+                      </Button>
+                      <Button
+                        color="error"
+                        variant="outlined"
+                        disabled={loggedUser?._id === user._id}
+                        onClick={() => handleDelete(user._id)}
+                      >
+                        {loggedUser?._id === user._id ? "Sesion actual" : "Eliminar"}
+                      </Button>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
 
-              {users.length === 0 && (
+              {!loading && users.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={3} align="center">
                     No hay usuarios registrados

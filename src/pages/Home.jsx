@@ -1,10 +1,11 @@
 import Navbar from "../components/Navbar";
 import { Container, Typography, Paper, Button, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { getStoredUser } from "../utils/session";
 
 function Home() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user")) || {};
+  const user = getStoredUser() || {};
 
   return (
     <>
@@ -15,7 +16,7 @@ function Home() {
             Bienvenido {user.name || user.username}
           </Typography>
           <Typography sx={{ mb: 3 }}>
-            La aplicación de React ya está conectada con la REST API de Express y MongoDB.
+            La aplicacion de React ya esta conectada con la REST API de Express y MongoDB.
           </Typography>
           <Box display="flex" gap={2}>
             <Button variant="contained" onClick={() => navigate("/users")}>

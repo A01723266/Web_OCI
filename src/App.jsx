@@ -3,17 +3,20 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Users from "./pages/Users";
+import { hasSession } from "./utils/session";
 
 function ProtectedRoute({ children }) {
-  const user = localStorage.getItem("user");
-  return user ? children : <Navigate to="/" />;
+  return hasSession() ? children : <Navigate to="/" replace />;
 }
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route
+          path="/"
+          element={hasSession() ? <Navigate to="/home" replace /> : <Login />}
+        />
         <Route
           path="/home"
           element={

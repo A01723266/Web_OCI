@@ -1,8 +1,9 @@
 import Navbar from "../components/Navbar";
 import { Container, Typography, Paper, Avatar, Box } from "@mui/material";
+import { getStoredUser } from "../utils/session";
 
 function Profile() {
-  const user = JSON.parse(localStorage.getItem("user")) || {};
+  const user = getStoredUser() || {};
   const initial = (user.name || user.username || "U").charAt(0).toUpperCase();
 
   return (
@@ -20,7 +21,7 @@ function Profile() {
           </Box>
 
           <Typography sx={{ mt: 3 }}>
-            Esta información viene del usuario que inició sesión por medio de la API.
+            Esta informacion viene del usuario que inicio sesion por medio de la API.
           </Typography>
         </Paper>
       </Container>

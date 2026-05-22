@@ -9,14 +9,16 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { API_URL } from "../config";
+import { saveSession } from "../utils/session";
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(location.state?.message || "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event) => {
@@ -35,14 +37,14 @@ function Login() {
 
       const data = await response.json();
 
-      if (!response.ok || !data.login) {
-        throw new Error(data.msg || "Usuario o contraseña incorrectos");
+      if (!response.ok || !data.login || !data.token) {
+        throw new Error(data.msg || "Usuario o contrasena incorrectos");
       }
 
-      localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/home");
-    } catch (error) {
-      setError(error.message);
+      saveSession({ user: data.user, token: data.token });
+      navigate("/home", { replace: true });
+    } catch (requestError) {
+      setError(requestError.message);
     } finally {
       setLoading(false);
     }
@@ -78,7 +80,7 @@ function Login() {
             />
 
             <TextField
-              label="Contraseña"
+              label="Contrasena"
               type="password"
               fullWidth
               margin="normal"
@@ -94,7 +96,7 @@ function Login() {
               sx={{ mt: 2 }}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Iniciar sesión"}
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Iniciar sesion"}
             </Button>
           </Box>
         </Paper>
