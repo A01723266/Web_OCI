@@ -3,10 +3,19 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Users from "./pages/Users";
-import { hasSession } from "./utils/session";
+import UserDetail from "./pages/UserDetail";
+import { useAuth } from "./hooks/useAuth";
 
 function ProtectedRoute({ children }) {
-  return hasSession() ? children : <Navigate to="/" replace />;
+  const { isAuthenticated } = useAuth();
+
+  return isAuthenticated ? children : <Navigate to="/" replace />;
+}
+
+function LoginRoute() {
+  const { isAuthenticated } = useAuth();
+
+  return isAuthenticated ? <Navigate to="/home" replace /> : <Login />;
 }
 
 function App() {
@@ -15,7 +24,7 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={hasSession() ? <Navigate to="/home" replace /> : <Login />}
+          element={<LoginRoute />}
         />
         <Route
           path="/home"
@@ -38,6 +47,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Users />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/:id"
+          element={
+            <ProtectedRoute>
+              <UserDetail />
             </ProtectedRoute>
           }
         />

@@ -1,11 +1,15 @@
+import { useState } from "react";
 import Navbar from "../components/Navbar";
 import { Container, Typography, Paper, Button, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { getStoredUser } from "../utils/session";
+import LifecycleDemo from "../components/LifecycleDemo";
+import { useAuth } from "../hooks/useAuth";
 
 function Home() {
   const navigate = useNavigate();
-  const user = getStoredUser() || {};
+  const { user } = useAuth();
+  const currentUser = user || {};
+  const [showLifecycleDemo, setShowLifecycleDemo] = useState(true);
 
   return (
     <>
@@ -13,7 +17,7 @@ function Home() {
       <Container sx={{ mt: 4 }}>
         <Paper sx={{ padding: 4 }}>
           <Typography variant="h4" gutterBottom>
-            Bienvenido {user.name || user.username}
+            Bienvenido {currentUser.name || currentUser.username}
           </Typography>
           <Typography sx={{ mb: 3 }}>
             La aplicacion de React ya esta conectada con la REST API de Express y MongoDB.
@@ -27,6 +31,16 @@ function Home() {
             </Button>
           </Box>
         </Paper>
+
+        <Box mt={3}>
+          <Button
+            variant="outlined"
+            onClick={() => setShowLifecycleDemo((value) => !value)}
+          >
+            {showLifecycleDemo ? "Desmontar componente" : "Montar componente"}
+          </Button>
+          {showLifecycleDemo && <LifecycleDemo />}
+        </Box>
       </Container>
     </>
   );
